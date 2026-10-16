@@ -1,0 +1,9 @@
+{
+  "id": "game-backlog",
+  "name": "Game Backlog",
+  "version": "0.0.0",
+  "minAppVersion": "1.1.0",
+  "description": "Add games to your backlog note with Steam rating, Steam Deck status and ProtonDB data.",
+  "author": "Martin Caspersen",
+  "isDesktopOnly": false
+}
