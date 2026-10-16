@@ -1,6 +1,6 @@
 {
   "name": "game-backlog",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Obsidian plugin for managing a game backlog — add games with Steam rating, Steam Deck status and ProtonDB data.",
   "main": "main.js",
   "scripts": {
