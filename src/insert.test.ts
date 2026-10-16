@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { appendToEnd, appendToSection, findDuplicate, normalizeName } from "./insert";
+import {
+  appendToEnd,
+  appendToSection,
+  diffLines,
+  entryBody,
+  findDuplicate,
+  normalizeName,
+  parseListItem,
+  placeEntry,
+} from "./insert";
 
 const note = [
   "# Games",
@@ -33,6 +42,22 @@ describe("appendToSection", () => {
   });
 });
 
+describe("appendToSection with an empty section", () => {
+  it("puts a blank line between the heading and the first entry", () => {
+    expect(appendToSection("## Main\n\n## VR\n", "Main", "- A")).toBe("## Main\n\n- A\n\n## VR\n");
+  });
+  it("adds blank lines when the next heading follows immediately", () => {
+    expect(appendToSection("## Main\n## VR\n", "Main", "- A")).toBe("## Main\n\n- A\n\n## VR\n");
+  });
+  it("works for an empty last section", () => {
+    expect(appendToSection("## VR\n", "VR", "- A")).toBe("## VR\n\n- A\n");
+    expect(appendToSection("## VR", "VR", "- A")).toBe("## VR\n\n- A");
+  });
+  it("leaves non-empty sections unchanged in shape", () => {
+    expect(appendToSection("## Main\n- A\n\n## VR\n", "Main", "- B")).toBe("## Main\n- A\n- B\n\n## VR\n");
+  });
+});
+
 describe("appendToEnd", () => {
   it("ensures exactly one trailing newline", () => {
     expect(appendToEnd("- A\n\n\n", "- B")).toBe("- A\n- B\n");
@@ -47,8 +72,6 @@ describe("findDuplicate", () => {
   });
   it("normalizes names", () => expect(normalizeName("Dead Cells (SD)")).toBe("dead cells"));
 });
-
-import { diffLines, entryBody, parseListItem, placeEntry } from "./insert";
 
 const entry = "- New — Good (90%) · SD-good · Verified";
 const body = "New — Good (90%) · SD-good · Verified";

@@ -11,6 +11,9 @@ export interface AddGameRequest {
 /**
  * Modal flow: find the game, review the fetched data and suggested verdict, then confirm.
  * `findDuplicate` lets the caller warn about games already in the note.
+ *
+ * The search inputs are built once so they keep focus and their text; only the results/preview area below
+ * them is re-rendered.
  */
 export class AddGameModal extends Modal {
   private query = "";
@@ -26,6 +29,13 @@ export class AddGameModal extends Modal {
   private line = "";
   private duplicate: string | null = null;
 
+  /** True once the user picked a verdict by hand; later input changes no longer re-suggest it. */
+  private verdictTouched = false;
+  /** True once the user typed in the preview line; later input changes no longer rebuild it. */
+  private lineEdited = false;
+
+  private resultsEl!: HTMLElement;
+
   constructor(
     app: App,
     private onSubmit: (request: AddGameRequest) => Promise<void>,
@@ -35,14 +45,6 @@ export class AddGameModal extends Modal {
   }
 
   onOpen(): void {
-    this.render();
-  }
-
-  onClose(): void {
-    this.contentEl.empty();
-  }
-
-  private render(): void {
     const { contentEl } = this;
     contentEl.empty();
     this.titleEl.setText("Add game");
@@ -87,12 +89,25 @@ export class AddGameModal extends Modal {
         }),
       );
 
-    if (this.status) contentEl.createEl("p", { text: this.status, cls: "mod-warning" });
+    this.resultsEl = contentEl.createDiv();
+    this.renderResults();
+  }
+
+  onClose(): void {
+    this.contentEl.empty();
+  }
+
+  /** Re-renders the area below the search inputs: status, pick list, manual entry or preview. */
+  private renderResults(): void {
+    const el = this.resultsEl;
+    el.empty();
+
+    if (this.status) el.createEl("p", { text: this.status, cls: "mod-warning" });
 
     if (!this.selected && this.results.length > 0) {
-      contentEl.createEl("h4", { text: "Pick the right game" });
+      el.createEl("h4", { text: "Pick the right game" });
       for (const result of this.results) {
-        new Setting(contentEl)
+        new Setting(el)
           .setName(result.name)
           .setDesc(`Steam app ${result.appId}`)
           .addButton((button) => button.setButtonText("Select").onClick(() => void this.select(result)));
@@ -100,30 +115,29 @@ export class AddGameModal extends Modal {
     }
 
     if (!this.selected && this.status.startsWith("No Steam results")) {
-      new Setting(contentEl)
+      new Setting(el)
         .setName("Add without Steam data")
         .setDesc("Creates an SD-skip entry marked as not found on Steam")
         .addButton((button) => button.setButtonText("Add manually").onClick(() => this.addManual()));
     }
 
-    if (this.selected && this.data) this.renderPreview();
+    if (this.selected && this.data) this.renderPreview(el);
   }
 
-  private renderPreview(): void {
-    const { contentEl } = this;
-    contentEl.createEl("h4", { text: this.selected?.name ?? "" });
+  private renderPreview(el: HTMLElement): void {
+    el.createEl("h4", { text: this.selected?.name ?? "" });
 
     if (this.data && this.data.missing.length > 0) {
-      contentEl.createEl("p", {
+      el.createEl("p", {
         text: `Could not fetch: ${this.data.missing.join(", ")}. Those fields are left out of the line.`,
         cls: "mod-warning",
       });
     }
     if (this.duplicate) {
-      contentEl.createEl("p", { text: `Already in the note: ${this.duplicate}`, cls: "mod-warning" });
+      el.createEl("p", { text: `Already in the note: ${this.duplicate}`, cls: "mod-warning" });
     }
 
-    new Setting(contentEl)
+    new Setting(el)
       .setName("Steam Deck verdict")
       .setDesc("Suggested from Valve status and ProtonDB; change it if you disagree")
       .addDropdown((dropdown) =>
@@ -133,11 +147,12 @@ export class AddGameModal extends Modal {
           .setValue(this.verdict)
           .onChange((value) => {
             this.verdict = value as Verdict;
+            this.verdictTouched = true;
             this.rebuildLine();
           }),
       );
 
-    new Setting(contentEl)
+    new Setting(el)
       .setName("Extra reason")
       .setDesc('Appended after the evidence, e.g. "locked 30 fps"')
       .addText((text) =>
@@ -147,13 +162,28 @@ export class AddGameModal extends Modal {
         }),
       );
 
-    const area = contentEl.createEl("textarea", { cls: "game-backlog-line" });
+    const area = el.createEl("textarea", { cls: "game-backlog-line" });
     area.value = this.line;
     area.rows = 3;
     area.style.width = "100%";
-    area.addEventListener("input", () => (this.line = area.value));
+    area.addEventListener("input", () => {
+      this.line = area.value;
+      this.lineEdited = true;
+    });
 
-    new Setting(contentEl).addButton((button) =>
+    new Setting(el)
+      .setName("Regenerate line")
+      .setDesc("Discard manual changes and rebuild the verdict and line from the fields above")
+      .addButton((button) =>
+        button.setButtonText("Regenerate").onClick(() => {
+          this.verdictTouched = false;
+          this.lineEdited = false;
+          this.recompute();
+          this.renderResults();
+        }),
+      );
+
+    new Setting(el).addButton((button) =>
       button
         .setButtonText(this.duplicate ? "Add anyway" : "Add to list")
         .setCta()
@@ -167,8 +197,10 @@ export class AddGameModal extends Modal {
     this.selected = null;
     this.data = null;
     this.results = [];
+    this.verdictTouched = false;
+    this.lineEdited = false;
     this.status = "Searching Steam…";
-    this.render();
+    this.renderResults();
 
     try {
       const appId = parseAppId(query);
@@ -182,35 +214,46 @@ export class AddGameModal extends Modal {
     } catch {
       this.status = "No Steam results (the search failed). You can add the game manually.";
     }
-    this.render();
+    this.renderResults();
   }
 
   private async select(result: SearchResult): Promise<void> {
     this.selected = result;
     this.status = "Fetching Steam, Deck and ProtonDB data…";
-    this.render();
+    this.renderResults();
 
     this.data = await fetchGameData(result.appId);
     this.status = "";
     this.duplicate = await this.findDuplicate(result.name);
     this.recompute();
-    this.render();
+    this.renderResults();
   }
 
-  /** Re-suggests the verdict from current data/notes, then rebuilds the line. */
+  /**
+   * Re-suggests the verdict from the current data and notes, then rebuilds the line.
+   * A verdict the user chose by hand is kept, and so is a hand-edited line.
+   */
   private recompute(): void {
     if (!this.data) return;
-    this.verdict = suggestVerdict({
-      deck: this.data.deck,
-      proton: this.data.proton,
-      notes: this.notes,
-      mouseKeyboard: this.mouseKeyboard,
-    });
+    if (!this.verdictTouched) {
+      this.verdict = suggestVerdict({
+        deck: this.data.deck,
+        proton: this.data.proton,
+        notes: this.notes,
+        mouseKeyboard: this.mouseKeyboard,
+      });
+      this.syncVerdictDropdown();
+    }
     this.rebuildLine();
   }
 
+  private syncVerdictDropdown(): void {
+    const select = this.resultsEl.querySelector<HTMLSelectElement>("select.dropdown");
+    if (select) select.value = this.verdict;
+  }
+
   private rebuildLine(): void {
-    if (!this.selected || !this.data) return;
+    if (!this.selected || !this.data || this.lineEdited) return;
     const { reviews, deck, proton } = this.data;
     const extra = [this.mouseKeyboard ? "mouse/keyboard-centric" : "", this.evidenceExtra]
       .filter((part) => part)
@@ -222,7 +265,7 @@ export class AddGameModal extends Modal {
       verdict: this.verdict,
       evidence: formatEvidence(deck, proton, extra),
     });
-    const area = this.contentEl.querySelector<HTMLTextAreaElement>("textarea.game-backlog-line");
+    const area = this.resultsEl.querySelector<HTMLTextAreaElement>("textarea.game-backlog-line");
     if (area) area.value = this.line;
   }
 

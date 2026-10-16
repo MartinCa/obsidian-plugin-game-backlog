@@ -66,7 +66,14 @@ export function appendToSection(content: string, heading: string, line: string):
 
   let insertAt = end;
   while (insertAt > start + 1 && lines[insertAt - 1].trim() === "") insertAt--;
-  lines.splice(insertAt, 0, line);
+
+  if (insertAt === start + 1) {
+    // Empty section: keep the usual "heading / blank / items / blank" shape.
+    const needsTrailingBlank = insertAt < lines.length && lines[insertAt].trim() !== "";
+    lines.splice(insertAt, 0, "", line, ...(needsTrailingBlank ? [""] : []));
+  } else {
+    lines.splice(insertAt, 0, line);
+  }
   return lines.join("\n");
 }
 
