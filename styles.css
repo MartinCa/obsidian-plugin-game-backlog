@@ -1,0 +1,6 @@
+.game-backlog-line {
+  width: 100%;
+  font-family: var(--font-monospace);
+  font-size: var(--font-smaller);
+  margin-bottom: var(--size-4-2);
+}

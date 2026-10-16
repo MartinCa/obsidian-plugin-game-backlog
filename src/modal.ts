@@ -165,7 +165,6 @@ export class AddGameModal extends Modal {
     const area = el.createEl("textarea", { cls: "game-backlog-line" });
     area.value = this.line;
     area.rows = 3;
-    area.style.width = "100%";
     area.addEventListener("input", () => {
       this.line = area.value;
       this.lineEdited = true;
