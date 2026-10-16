@@ -1,0 +1,121 @@
+name: Publish
+
+on:
+  release:
+    types: [published]
+
+permissions: {}
+
+concurrency:
+  group: publish-${{ github.ref }}
+  # Never cancel a publish midway: a half-pushed asset set is worse than
+  # waiting for the previous run to finish.
+  cancel-in-progress: false
+
+jobs:
+  publish_assets:
+    name: Build & upload release assets
+    runs-on: ubuntu-latest
+    permissions:
+      # Only `gh release upload` uses the workflow token. The version-bump push
+      # authenticates as the VERSION_BUMP App below, because the main ruleset
+      # blocks GITHUB_TOKEN.
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          # Intentionally no cache — matching previous npm behavior.
+          package-manager-cache: false
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Stamp version from release tag
+        env:
+          GITHUB_EVENT_RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
+        run: |
+          VERSION="${GITHUB_EVENT_RELEASE_TAG_NAME#v}"
+          jq --arg v "$VERSION" '.version = $v' manifest.json > manifest.tmp && mv manifest.tmp manifest.json
+          jq --arg v "$VERSION" '.version = $v' package.json > package.tmp && mv package.tmp package.json
+
+      - name: Type check
+        run: pnpm exec tsc --noEmit --skipLibCheck
+
+      - name: Build
+        run: node esbuild.config.mjs production
+
+      - name: Upload release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_EVENT_RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
+        run: |
+          gh release upload "${GITHUB_EVENT_RELEASE_TAG_NAME}" main.js styles.css manifest.json
+
+      # Mint the VERSION_BUMP GitHub App's installation token for the
+      # version-bump push below. The default GITHUB_TOKEN is denied writes to
+      # the default branch by the repository's ruleset; the App is on that
+      # ruleset's bypass list, so its token may land the automated bump commit.
+      # owner/repositories are left unset, which scopes the token to this
+      # repository only, and permission-contents: write is the narrowest
+      # permission the push needs. The token is short-lived (1h) and revoked by
+      # the action's post step when the job ends.
+      - uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        id: app-token
+        with:
+          client-id: ${{ secrets.VERSION_BUMP_APP_CLIENT_ID }}
+          private-key: ${{ secrets.VERSION_BUMP_APP_PRIVATE_KEY }}
+          permission-contents: write
+
+      # Authenticate git as the VERSION_BUMP App without embedding the token in
+      # a push URL. The token lives only in this step's env, never in script
+      # text. The rewrite is removed again in the always() step below.
+      - name: Configure git to authenticate as the VERSION_BUMP App
+        env:
+          APP_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: git config --global url."https://x-access-token:${APP_TOKEN}@github.com/".insteadOf "https://github.com/"
+
+      - name: Update release files on the default branch
+        env:
+          # The lefthook pre-commit hook needs tools the runner doesn't have
+          # (betterleaks), and this commit only touches generated JSON.
+          LEFTHOOK: "0"
+          GITHUB_EVENT_RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          VERSION="${GITHUB_EVENT_RELEASE_TAG_NAME#v}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin "${DEFAULT_BRANCH}"
+          # The stamped manifest/package.json were only for the build above;
+          # discard them and start from the branch tip.
+          git checkout --force -B "${DEFAULT_BRANCH}" "origin/${DEFAULT_BRANCH}"
+
+          MIN_APP_VERSION=$(jq -r '.minAppVersion' manifest.json)
+
+          jq --arg v "$VERSION" --arg min "$MIN_APP_VERSION" '. + {($v): $min}' versions.json > versions.tmp && mv versions.tmp versions.json
+          jq --arg v "$VERSION" '.version = $v' manifest.json > manifest.tmp && mv manifest.tmp manifest.json
+          jq --arg v "$VERSION" '.version = $v' package.json > package.tmp && mv package.tmp package.json
+
+          git add versions.json manifest.json package.json
+          if git diff --cached --quiet; then
+            echo "Release files already at ${VERSION}; nothing to commit."
+          else
+            git commit --no-verify -m "chore: release ${VERSION} [skip ci]"
+            git push origin "HEAD:${DEFAULT_BRANCH}"
+          fi
+
+      # The App's installation token must not outlive the job: remove the
+      # rewrite from the runner's global git config. `always()` so a failed
+      # push does not leave the credential behind.
+      - name: Remove the VERSION_BUMP App rewrite from global git config
+        if: always()
+        env:
+          APP_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: git config --global --unset-all "url.https://x-access-token:${APP_TOKEN}@github.com/.insteadOf" || true
