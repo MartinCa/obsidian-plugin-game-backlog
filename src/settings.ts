@@ -29,9 +29,9 @@ export class GameBacklogSettingTab extends PluginSettingTab {
     containerEl.empty();
 
     new Setting(containerEl)
-      .setName("Target note")
+      .setName("Fallback note")
       .setDesc(
-        "Vault path of the note that holds your game list, e.g. Games/Backlog.md. Leave empty to use the active note.",
+        "Games are added at the cursor when you are editing a note. If no note is being edited, they go to this note instead, e.g. Games/Backlog.md. Leave empty to use the active note.",
       )
       .addText((text) =>
         text
@@ -44,8 +44,10 @@ export class GameBacklogSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Where to add new games")
-      .setDesc("New entries are always added at the end, so your existing order is kept.")
+      .setName("Fallback position")
+      .setDesc(
+        "Where games go in the fallback note. New entries are always added at the end, so your existing order is kept.",
+      )
       .addDropdown((dropdown) =>
         dropdown
           .addOption("section", "End of a section")
@@ -59,7 +61,7 @@ export class GameBacklogSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("Section heading")
-      .setDesc("Used when adding to the end of a section. The heading must already exist in the note.")
+      .setDesc("Used when adding to the end of a section. The heading must already exist in the fallback note.")
       .addText((text) =>
         text
           .setPlaceholder("Main")

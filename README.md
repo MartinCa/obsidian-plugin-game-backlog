@@ -4,7 +4,14 @@ Obsidian plugin that adds a game to your backlog note with its Steam rating, Ste
 
 ## Usage
 
-Run the command **Add game**, type a name (or paste a Steam URL / app ID), pick the match, review the suggested line and confirm. The line is added at the end of the configured section, so your order is kept.
+Run the command **Add game**, type a name (or paste a Steam URL / app ID), pick the match, review the suggested line and confirm. The entry is added at the cursor, following the surrounding list style (bulleted or numbered):
+
+- Cursor on an empty list item: the entry fills it.
+- Cursor on an existing entry: the entry is added as a new item right after it (and after its nested lines). In a numbered list the numbering continues and following numbers are shifted.
+- Cursor on a blank line: the entry goes there, continuing the list above if there is one.
+- Cursor on other text: the entry is added as a bullet on the next line.
+
+If no note is being edited (for example in reading mode), the entry goes to the fallback note from the settings instead.
 
 ```
 - Ball X Pit — Overwhelmingly Positive (95%) · SD-good · Verified, ProtonDB Platinum (95)
@@ -22,8 +29,8 @@ Run the command **Add game**, type a name (or paste a Steam URL / app ID), pick 
 
 ## Settings
 
-- **Target note:** vault path of your list (empty = active note).
-- **Where to add new games:** end of a section (default heading `Main`, must exist) or end of the note.
+- **Fallback note:** vault path used when no note is being edited (empty = active note).
+- **Fallback position:** end of a section (default heading `Main`, must exist) or end of the note.
 
 ## Data sources
 
