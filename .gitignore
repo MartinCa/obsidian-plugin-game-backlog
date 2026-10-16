@@ -1,0 +1,15 @@
+# Build output
+main.js
+
+# pnpm
+node_modules/
+
+# IDE
+.vscode/
+
+# Claude Code
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db

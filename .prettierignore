@@ -1,0 +1,4 @@
+node_modules/
+main.js
+renovate.json
+pnpm-lock.yaml

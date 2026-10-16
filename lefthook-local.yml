@@ -1,0 +1,8 @@
+pre-commit:
+  commands:
+    lint-ts:
+      # Skipped because this repo has no ESLint setup — remove this override if ESLint is added, else hooks silently skip lint forever.
+      skip: true
+    format-ts:
+      run: pnpm exec prettier --write {staged_files}
+      glob: "*.{ts,tsx,json,css,md,js,mjs,html}"
