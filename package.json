@@ -14,7 +14,7 @@
   "keywords": [],
   "author": "",
   "license": "MIT",
-  "packageManager": "pnpm@12.16.0",
+  "packageManager": "pnpm@12.16.1",
   "devDependencies": {
     "@codemirror/state": "6.7.6",
     "@codemirror/view": "6.43.15",
