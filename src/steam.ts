@@ -32,6 +32,8 @@ export async function fetchAppName(appId: number): Promise<string | null> {
 
 export async function fetchReviews(appId: number): Promise<ReviewSummary | null> {
   // The old `store.steampowered.com/appreviews/<id>` endpoint now redirects to the store front page.
+  // Language and country are fixed: counts and percent are language-independent, but `review_score_label`
+  // is always the English label regardless of the user's locale.
   const input = encodeURIComponent(
     JSON.stringify({
       ids: [{ appid: appId }],
