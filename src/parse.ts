@@ -40,14 +40,19 @@ export function parseSearch(json: unknown): SearchResult[] {
   return results;
 }
 
+/** Parses `IStoreBrowseService/GetItems` (with `include_reviews`) into a review summary. */
 export function parseReviews(json: unknown): ReviewSummary | null {
-  const summary = (json as { query_summary?: Record<string, unknown> })?.query_summary;
-  if (!summary) return null;
-  const positive = Number(summary.total_positive);
-  const negative = Number(summary.total_negative);
-  if (!Number.isFinite(positive) || !Number.isFinite(negative)) return null;
-  const desc = typeof summary.review_score_desc === "string" ? summary.review_score_desc : "";
-  return { desc, positive, negative };
+  const item = (json as { response?: { store_items?: Array<Record<string, unknown>> } })?.response?.store_items?.[0];
+  if (!item || item.success !== 1) return null;
+  const summary = (item.reviews as { summary_filtered?: Record<string, unknown> } | undefined)?.summary_filtered;
+  // Games without reviews come back with no summary at all.
+  if (!summary) return { desc: "", positive: 0, negative: 0 };
+  const count = Number(summary.review_count);
+  const percent = Number(summary.percent_positive);
+  if (!Number.isFinite(count) || !Number.isFinite(percent)) return null;
+  const positive = Math.round((count * percent) / 100);
+  const desc = typeof summary.review_score_label === "string" ? summary.review_score_label : "";
+  return { desc, positive, negative: count - positive };
 }
 
 export function parseDeck(json: unknown): DeckCategory | null {

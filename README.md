@@ -34,7 +34,7 @@ If no note is being edited (for example in reading mode), the entry goes to the 
 
 ## Data sources
 
-- Steam store: `storesearch`, `appdetails`, `appreviews` and `ajaxgetdeckappcompatibilityreport`.
+- Steam store: `storesearch`, `appdetails`, `IStoreBrowseService` (reviews) and `ajaxgetdeckappcompatibilityreport`.
 - ProtonDB: `api/v1/reports/summaries/<appid>.json`.
 
 These are unofficial endpoints and may change. If a source fails, its field is left out of the line and the preview says so.

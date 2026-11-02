@@ -15,9 +15,14 @@ describe("response parsers", () => {
     expect(parseSearch({})).toEqual([]);
   });
   it("parses reviews", () => {
+    const item = (reviews?: unknown) => ({ response: { store_items: [{ success: 1, reviews }] } });
     expect(
-      parseReviews({ query_summary: { review_score_desc: "Very Positive", total_positive: 10, total_negative: 2 } }),
-    ).toEqual({ desc: "Very Positive", positive: 10, negative: 2 });
+      parseReviews(
+        item({ summary_filtered: { review_count: 200, percent_positive: 95, review_score_label: "Very Positive" } }),
+      ),
+    ).toEqual({ desc: "Very Positive", positive: 190, negative: 10 });
+    expect(parseReviews(item())).toEqual({ desc: "", positive: 0, negative: 0 });
+    expect(parseReviews({ response: { store_items: [{ success: 2 }] } })).toBeNull();
     expect(parseReviews({})).toBeNull();
   });
   it("parses the deck category from either shape", () => {
