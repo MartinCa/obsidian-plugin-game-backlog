@@ -13,6 +13,7 @@ export default class GameBacklogPlugin extends Plugin {
     this.addCommand({
       id: "add-game",
       name: "Add game",
+      icon: "gamepad-2",
       callback: () => {
         const view = this.app.workspace.getActiveViewOfType(MarkdownView);
         if (view && view.getMode() === "source") {
