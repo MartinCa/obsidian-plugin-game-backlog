@@ -30,7 +30,7 @@ Title [store] [sd] | steam% | sd-good or sd-skip | deck status, protondb tier co
 - `[store]` and `[sd]` come from the _Store / tags_ field (`epic sd` becomes `[epic] [sd]`). `[sd]` is your own Steam Deck tag.
 - `thin data` replaces the ProtonDB tier when there are too few reports.
 - `sd-good`, `sd-skip` and the genres are plain words, not Obsidian tags, so they do not clutter the vault's tag list and are not tied to the whole note. Find them with text search.
-- A `|` typed into a field is replaced with `/` so it cannot break the line.
+- A `|` typed into a field is replaced with `/` so it cannot break the line. In _Store / tags_ it is treated as a separator instead.
 
 Entries in the old format (`Title — Rating (95%) · SD-good · ...`) are still recognised when checking for duplicates.
 

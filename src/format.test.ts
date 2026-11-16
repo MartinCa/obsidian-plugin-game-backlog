@@ -34,6 +34,11 @@ describe("tags and genres", () => {
     expect(formatTags("")).toBe("");
     expect(parseTags("gog sd")).toEqual(["gog", "sd"]);
   });
+  it("treats a pipe in tag input as a separator", () => {
+    expect(formatTags("epic | sd")).toBe("[epic] [sd]");
+    expect(formatTags("epic|sd")).toBe("[epic] [sd]");
+    expect(formatTags("|")).toBe("");
+  });
   it("normalizes genre input", () => {
     expect(formatGenres("Metroidvania; Roguelike")).toBe("metroidvania, roguelike");
     expect(formatGenres(" puzzle ,, ")).toBe("puzzle");
@@ -123,6 +128,11 @@ describe("formatLine", () => {
     expect(formatLine({ ...base, name: "A | B", rating: "90%", verdict: "sd-skip", deck: "" })).toBe(
       "- A / B | 90% | sd-skip",
     );
+  });
+  it("never lets a pipe in the tags add a delimiter", () => {
+    const line = formatLine({ ...base, name: "A", tags: "epic | sd", rating: "95%", verdict: "sd-good", deck: "" });
+    expect(line).toBe("- A [epic] [sd] | 95% | sd-good");
+    expect(line.split(" | ")).toHaveLength(3);
   });
   it("formats games not on Steam", () => {
     expect(formatLine({ ...base, name: "Gundegon", rating: null, verdict: "sd-skip", deck: "not on steam" })).toBe(

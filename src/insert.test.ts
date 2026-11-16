@@ -73,6 +73,21 @@ describe("findDuplicate", () => {
   it("still finds entries in the old em dash format", () => {
     expect(findDuplicate("- Old (Epic) — Good (91%) · SD-skip", "old")).toBe("- Old (Epic) — Good (91%) · SD-skip");
   });
+  it("finds old-format entries whose name contains a spaced pipe", () => {
+    const old = "- A | B — Good (90%) · SD-good";
+    expect(findDuplicate(old, "A | B")).toBe(old);
+    expect(findDuplicate(old, "A")).toBeNull();
+  });
+  it("finds new-format entries whose note contains an em dash", () => {
+    const entry = "- C | 95% | sd-good | verified, platinum 9 | - | locked 30 fps — see notes";
+    expect(findDuplicate(entry, "C")).toBe(entry);
+    expect(findDuplicate(entry, "C | 95% | sd-good | verified, platinum 9 | - | locked 30 fps")).toBeNull();
+  });
+  it("finds new-format entries without Steam data", () => {
+    expect(findDuplicate("- Gundegon | - | sd-skip | not on steam", "gundegon")).toBe(
+      "- Gundegon | - | sd-skip | not on steam",
+    );
+  });
   it("normalizes names", () => {
     expect(normalizeName("Dead Cells (SD)")).toBe("dead cells");
     expect(normalizeName("Dead Cells [epic] [sd]")).toBe("dead cells");

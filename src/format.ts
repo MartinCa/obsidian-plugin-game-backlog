@@ -17,6 +17,7 @@ export function hasEnoughProtonData(proton: ProtonSummary | null): proton is Pro
 
 /**
  * Splits tag input such as "epic, sd", "[epic] [sd]" or "(Epic)(SD)" into unique lowercase tag names.
+ * A "|" is a separator too, so it can never end up in a tag and break the line.
  * Store tags keep their order and "sd" always goes last.
  */
 export function parseTags(input: string): string[] {
@@ -24,7 +25,7 @@ export function parseTags(input: string): string[] {
     ...new Set(
       input
         .toLowerCase()
-        .split(/[\s,;()[\]]+/)
+        .split(/[\s,;|()[\]]+/)
         .filter(Boolean),
     ),
   ];
