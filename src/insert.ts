@@ -1,17 +1,21 @@
 export type InsertMode = "section" | "end";
 
-/** Lowercases and strips parenthetical notes and punctuation so "Hades (Epic)" matches "Hades". */
+/** Lowercases and strips [tags], (notes) and punctuation so "Hades [epic]" matches "Hades". */
 export function normalizeName(name: string): string {
   return name
     .toLowerCase()
+    .replace(/\[[^\]]*\]/g, " ")
     .replace(/\([^)]*\)/g, " ")
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
 }
 
-/** Extracts the game name from a list line: text between "- " and the first " — ". */
+/**
+ * Extracts the game name from a list line: text between "- " and the first " | ".
+ * The old " — " separator is still recognised so entries not yet converted are found as duplicates.
+ */
 function lineName(line: string): string | null {
-  const match = /^\s*[-*]\s+(.+?)\s+—\s/.exec(line);
+  const match = /^\s*[-*]\s+(.+?)\s+(?:\||—)\s/.exec(line);
   return match ? match[1] : null;
 }
 
