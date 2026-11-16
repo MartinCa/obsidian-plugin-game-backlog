@@ -1,17 +1,28 @@
 export type InsertMode = "section" | "end";
 
-/** Lowercases and strips parenthetical notes and punctuation so "Hades (Epic)" matches "Hades". */
+/** Lowercases and strips [tags], (notes) and punctuation so "Hades [epic]" matches "Hades". */
 export function normalizeName(name: string): string {
   return name
     .toLowerCase()
+    .replace(/\[[^\]]*\]/g, " ")
     .replace(/\([^)]*\)/g, " ")
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
 }
 
-/** Extracts the game name from a list line: text between "- " and the first " — ". */
+/** New layout: "Name | 95% | ...". The name ends at the first " | " that is followed by a rating field. */
+const NEW_ENTRY = /^\s*[-*]\s+(.+?)\s+\|\s+(?:\d+%|-)(?=\s+\||\s*$)/;
+
+/** Old layout: "Name — Rating (95%) · SD-good ...". The name may itself contain a spaced pipe. */
+const LEGACY_ENTRY = /^\s*[-*]\s+(.+?)\s+—\s/;
+
+/**
+ * Extracts the game name from a list line. Old entries are still recognised so entries that were
+ * not converted are found as duplicates; the new layout is tried first so an em dash in a note
+ * does not cut a new entry's name short.
+ */
 function lineName(line: string): string | null {
-  const match = /^\s*[-*]\s+(.+?)\s+—\s/.exec(line);
+  const match = NEW_ENTRY.exec(line) ?? LEGACY_ENTRY.exec(line);
   return match ? match[1] : null;
 }
 

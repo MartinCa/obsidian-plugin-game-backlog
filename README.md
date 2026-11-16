@@ -14,18 +14,31 @@ Run the command **Add game**, type a name (or paste a Steam URL / app ID), pick 
 If no note is being edited (for example in reading mode), the entry goes to the fallback note from the settings instead.
 
 ```
-- Ball X Pit — Overwhelmingly Positive (95%) · SD-good · Verified, ProtonDB Platinum (95)
-- Elden Ring — Very Positive (93%) · SD-skip · Verified, ProtonDB Gold (2105); locked 30 fps
-- Gundegon — no Steam rating · SD-skip — not found on Steam
+- Ball X Pit | 95% | sd-good | verified, platinum 95
+- Elden Ring [epic] | 93% | sd-skip | verified, gold 2105 | - | locked 30 fps
+- Dead Cells [sd] | 97% | sd-good | verified, platinum 157 | metroidvania, roguelike
+- Gundegon | - | sd-skip | not on steam
 ```
 
-`SD-good` and `SD-skip` are plain words, not tags, so they do not clutter the vault's tag list. Find them with Obsidian's text search.
+The format uses only characters you can type on a keyboard:
+
+```
+Title [store] [sd] | steam% | sd-good or sd-skip | deck status, protondb tier count | genres | note
+```
+
+- Fields are always in this order. An empty field in the middle is `-`, trailing empty fields are left out.
+- `[store]` and `[sd]` come from the _Store / tags_ field (`epic sd` becomes `[epic] [sd]`). `[sd]` is your own Steam Deck tag.
+- `thin data` replaces the ProtonDB tier when there are too few reports.
+- `sd-good`, `sd-skip` and the genres are plain words, not Obsidian tags, so they do not clutter the vault's tag list and are not tied to the whole note. Find them with text search.
+- A `|` typed into a field is replaced with `/` so it cannot break the line. In _Store / tags_ it is treated as a separator instead.
+
+Entries in the old format (`Title — Rating (95%) · SD-good · ...`) are still recognised when checking for duplicates.
 
 ### Steam Deck verdict
 
-- **SD-good:** Verified, or Playable with ProtonDB Platinum (at least 5 reports).
-- **SD-skip:** everything else, or when you tick _Mouse/keyboard-centric_.
-- A `(SD)` in the notes always means SD-good. You can override the suggestion before adding.
+- **sd-good:** Verified, or Playable with ProtonDB Platinum (at least 5 reports).
+- **sd-skip:** everything else, or when you tick _Mouse/keyboard-centric_.
+- An `sd` tag always means sd-good. You can override the suggestion before adding.
 
 ## Settings
 

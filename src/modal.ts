@@ -1,5 +1,5 @@
 import { App, Modal, Notice, Setting } from "obsidian";
-import { formatEvidence, formatLine, formatRating, suggestVerdict, Verdict } from "./format";
+import { formatDeck, formatLine, formatRating, suggestVerdict, Verdict } from "./format";
 import { parseAppId, SearchResult } from "./parse";
 import { fetchAppName, fetchGameData, GameData, searchSteam } from "./steam";
 
@@ -17,15 +17,16 @@ export interface AddGameRequest {
  */
 export class AddGameModal extends Modal {
   private query = "";
-  private notes = "";
+  private tags = "";
+  private genres = "";
   private mouseKeyboard = false;
   private results: SearchResult[] = [];
   private status = "";
 
   private selected: SearchResult | null = null;
   private data: GameData | null = null;
-  private verdict: Verdict = "SD-skip";
-  private evidenceExtra = "";
+  private verdict: Verdict = "sd-skip";
+  private note = "";
   private line = "";
   private duplicate: string | null = null;
 
@@ -70,18 +71,28 @@ export class AddGameModal extends Modal {
       );
 
     new Setting(contentEl)
-      .setName("Store / notes")
-      .setDesc('Kept in the entry, e.g. "(Epic)", "(GOG)", "(SD)" or "Wait for patch"')
+      .setName("Store / tags")
+      .setDesc('Shown as [tags] after the title, e.g. "epic", "gog" or "epic sd"')
       .addText((text) =>
-        text.setValue(this.notes).onChange((value) => {
-          this.notes = value;
+        text.setValue(this.tags).onChange((value) => {
+          this.tags = value;
           this.recompute();
         }),
       );
 
     new Setting(contentEl)
+      .setName("Genres")
+      .setDesc('Comma-separated, e.g. "metroidvania, roguelike"')
+      .addText((text) =>
+        text.setValue(this.genres).onChange((value) => {
+          this.genres = value;
+          this.rebuildLine();
+        }),
+      );
+
+    new Setting(contentEl)
       .setName("Mouse/keyboard-centric")
-      .setDesc("Forces SD-skip, e.g. for FPS and mouse-driven strategy")
+      .setDesc("Forces sd-skip, e.g. for FPS and mouse-driven strategy")
       .addToggle((toggle) =>
         toggle.setValue(this.mouseKeyboard).onChange((value) => {
           this.mouseKeyboard = value;
@@ -117,7 +128,7 @@ export class AddGameModal extends Modal {
     if (!this.selected && this.status.startsWith("No Steam results")) {
       new Setting(el)
         .setName("Add without Steam data")
-        .setDesc("Creates an SD-skip entry marked as not found on Steam")
+        .setDesc("Creates an sd-skip entry marked as not on Steam")
         .addButton((button) => button.setButtonText("Add manually").onClick(() => this.addManual()));
     }
 
@@ -142,8 +153,8 @@ export class AddGameModal extends Modal {
       .setDesc("Suggested from Valve status and ProtonDB; change it if you disagree")
       .addDropdown((dropdown) =>
         dropdown
-          .addOption("SD-good", "SD-good")
-          .addOption("SD-skip", "SD-skip")
+          .addOption("sd-good", "sd-good")
+          .addOption("sd-skip", "sd-skip")
           .setValue(this.verdict)
           .onChange((value) => {
             this.verdict = value as Verdict;
@@ -153,11 +164,11 @@ export class AddGameModal extends Modal {
       );
 
     new Setting(el)
-      .setName("Extra reason")
-      .setDesc('Appended after the evidence, e.g. "locked 30 fps"')
+      .setName("Note")
+      .setDesc('Last field of the entry, e.g. "locked 30 fps" or "wait for patch"')
       .addText((text) =>
-        text.setValue(this.evidenceExtra).onChange((value) => {
-          this.evidenceExtra = value;
+        text.setValue(this.note).onChange((value) => {
+          this.note = value;
           this.rebuildLine();
         }),
       );
@@ -229,7 +240,7 @@ export class AddGameModal extends Modal {
   }
 
   /**
-   * Re-suggests the verdict from the current data and notes, then rebuilds the line.
+   * Re-suggests the verdict from the current data and tags, then rebuilds the line.
    * A verdict the user chose by hand is kept, and so is a hand-edited line.
    */
   private recompute(): void {
@@ -238,7 +249,7 @@ export class AddGameModal extends Modal {
       this.verdict = suggestVerdict({
         deck: this.data.deck,
         proton: this.data.proton,
-        notes: this.notes,
+        tags: this.tags,
         mouseKeyboard: this.mouseKeyboard,
       });
       this.syncVerdictDropdown();
@@ -254,15 +265,15 @@ export class AddGameModal extends Modal {
   private rebuildLine(): void {
     if (!this.selected || !this.data || this.lineEdited) return;
     const { reviews, deck, proton } = this.data;
-    const extra = [this.mouseKeyboard ? "mouse/keyboard-centric" : "", this.evidenceExtra]
-      .filter((part) => part)
-      .join("; ");
+    const note = [this.mouseKeyboard ? "mouse/keyboard-centric" : "", this.note].filter((part) => part).join("; ");
     this.line = formatLine({
       name: this.selected.name,
-      notes: this.notes,
+      tags: this.tags,
       rating: reviews ? formatRating(reviews) : null,
       verdict: this.verdict,
-      evidence: formatEvidence(deck, proton, extra),
+      deck: formatDeck(deck, proton),
+      genres: this.genres,
+      note,
     });
     const area = this.resultsEl.querySelector<HTMLTextAreaElement>("textarea.game-backlog-line");
     if (area) area.value = this.line;
@@ -276,10 +287,12 @@ export class AddGameModal extends Modal {
     }
     const line = formatLine({
       name,
-      notes: this.notes,
+      tags: this.tags,
       rating: null,
-      verdict: "SD-skip",
-      evidence: "not found on Steam",
+      verdict: "sd-skip",
+      deck: "not on steam",
+      genres: this.genres,
+      note: this.note,
     });
     void this.submitLine(line, name);
   }

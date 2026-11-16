@@ -15,26 +15,26 @@ const note = [
   "",
   "## Main",
   "",
-  "- A — Good (90%) · SD-good",
-  "- B (Epic) — Good (91%) · SD-skip",
+  "- A | 90% | sd-good",
+  "- B [epic] | 91% | sd-skip",
   "",
   "## VR",
   "",
-  "- Alyx — OP (98%)",
+  "- Alyx | 98%",
   "",
 ].join("\n");
 
 describe("appendToSection", () => {
   it("adds after the last entry of the section, before the next heading", () => {
-    const result = appendToSection(note, "Main", "- C — new")!;
+    const result = appendToSection(note, "Main", "- C | new")!;
     const lines = result.split("\n");
-    expect(lines[lines.indexOf("- C — new") - 1]).toBe("- B (Epic) — Good (91%) · SD-skip");
-    expect(lines[lines.indexOf("- C — new") + 1]).toBe("");
-    expect(lines[lines.indexOf("- C — new") + 2]).toBe("## VR");
+    expect(lines[lines.indexOf("- C | new") - 1]).toBe("- B [epic] | 91% | sd-skip");
+    expect(lines[lines.indexOf("- C | new") + 1]).toBe("");
+    expect(lines[lines.indexOf("- C | new") + 2]).toBe("## VR");
   });
   it("handles the last section and keeps the trailing newline", () => {
-    const result = appendToSection(note, "VR", "- Moss — new")!;
-    expect(result.endsWith("- Alyx — OP (98%)\n- Moss — new\n")).toBe(true);
+    const result = appendToSection(note, "VR", "- Moss | new")!;
+    expect(result.endsWith("- Alyx | 98%\n- Moss | new\n")).toBe(true);
   });
   it("matches headings case-insensitively and returns null when missing", () => {
     expect(appendToSection(note, "main", "- C")).not.toBeNull();
@@ -67,14 +67,35 @@ describe("appendToEnd", () => {
 
 describe("findDuplicate", () => {
   it("matches ignoring notes, case and punctuation", () => {
-    expect(findDuplicate(note, "b")).toBe("- B (Epic) — Good (91%) · SD-skip");
+    expect(findDuplicate(note, "b")).toBe("- B [epic] | 91% | sd-skip");
     expect(findDuplicate(note, "Half-Life: Alyx")).toBeNull();
   });
-  it("normalizes names", () => expect(normalizeName("Dead Cells (SD)")).toBe("dead cells"));
+  it("still finds entries in the old em dash format", () => {
+    expect(findDuplicate("- Old (Epic) — Good (91%) · SD-skip", "old")).toBe("- Old (Epic) — Good (91%) · SD-skip");
+  });
+  it("finds old-format entries whose name contains a spaced pipe", () => {
+    const old = "- A | B — Good (90%) · SD-good";
+    expect(findDuplicate(old, "A | B")).toBe(old);
+    expect(findDuplicate(old, "A")).toBeNull();
+  });
+  it("finds new-format entries whose note contains an em dash", () => {
+    const entry = "- C | 95% | sd-good | verified, platinum 9 | - | locked 30 fps — see notes";
+    expect(findDuplicate(entry, "C")).toBe(entry);
+    expect(findDuplicate(entry, "C | 95% | sd-good | verified, platinum 9 | - | locked 30 fps")).toBeNull();
+  });
+  it("finds new-format entries without Steam data", () => {
+    expect(findDuplicate("- Gundegon | - | sd-skip | not on steam", "gundegon")).toBe(
+      "- Gundegon | - | sd-skip | not on steam",
+    );
+  });
+  it("normalizes names", () => {
+    expect(normalizeName("Dead Cells (SD)")).toBe("dead cells");
+    expect(normalizeName("Dead Cells [epic] [sd]")).toBe("dead cells");
+  });
 });
 
-const entry = "- New — Good (90%) · SD-good · Verified";
-const body = "New — Good (90%) · SD-good · Verified";
+const entry = "- New | 90% | sd-good | verified";
+const body = "New | 90% | sd-good | verified";
 
 describe("entryBody / parseListItem", () => {
   it("strips markers", () => {
