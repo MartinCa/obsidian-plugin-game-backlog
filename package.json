@@ -21,7 +21,7 @@
     "@types/node": "26.6.10",
     "builtin-modules": "5.5.0",
     "esbuild": "0.28.2",
-    "lefthook": "2.2.2",
+    "lefthook": "2.2.3",
     "obsidian": "latest",
     "prettier": "3.10.1",
     "tslib": "2.9.1",
