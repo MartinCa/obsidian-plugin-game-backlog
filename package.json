@@ -17,7 +17,7 @@
   "packageManager": "pnpm@12.23.0",
   "devDependencies": {
     "@codemirror/state": "6.7.6",
-    "@codemirror/view": "6.43.15",
+    "@codemirror/view": "6.44.0",
     "@types/node": "26.6.10",
     "builtin-modules": "5.5.0",
     "esbuild": "0.28.2",
